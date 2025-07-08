@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, SkipForward, ArrowLeft, ArrowRight, Square, Tag, Trash2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Save, SkipForward, ArrowLeft, ArrowRight, Square, Tag, Trash2, ZoomIn, ZoomOut, RotateCcw, Download, Upload } from "lucide-react";
 
 interface AnnotationWorkspaceProps {
   selectedProject: any;
@@ -19,6 +21,10 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({ selectedProje
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentBox, setCurrentBox] = useState<any>(null);
   const [selectedLabel, setSelectedLabel] = useState('');
+  const [zoom, setZoom] = useState(1);
+  const [sentiment, setSentiment] = useState('');
+  const [confidence, setConfidence] = useState('');
+  const [notes, setNotes] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const sampleImages = [
@@ -80,12 +86,18 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({ selectedProje
 
   const renderImageAnnotation = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Image Annotation</h3>
+      {/* Progress and Navigation Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-slate-900">Image Annotation</h3>
+          <div className="flex items-center space-x-4 text-sm text-slate-600">
+            <span>Item {currentIndex + 1} of {sampleImages.length}</span>
+            <Separator orientation="vertical" className="h-4" />
+            <span>{annotations.length} annotations</span>
+          </div>
+          <Progress value={(currentIndex + 1) / sampleImages.length * 100} className="w-48" />
+        </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-slate-600">
-            {currentIndex + 1} of {sampleImages.length}
-          </span>
           <Button
             variant="outline"
             size="sm"
@@ -105,139 +117,227 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({ selectedProje
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <Card className="shadow-lg">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">Image Viewer</CardTitle>
+                <div className="flex items-center space-x-2">
+                  <Button variant="ghost" size="sm" onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}>
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-slate-600 min-w-12 text-center">{Math.round(zoom * 100)}%</span>
+                  <Button variant="ghost" size="sm" onClick={() => setZoom(Math.min(3, zoom + 0.25))}>
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                  <Separator orientation="vertical" className="h-4" />
+                  <Button variant="ghost" size="sm" onClick={() => setZoom(1)}>
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
             <CardContent className="p-4">
-              <div className="relative">
-                <img
-                  src={sampleImages[currentIndex]}
-                  alt={`Annotation ${currentIndex + 1}`}
-                  className="w-full h-96 object-cover rounded"
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="absolute inset-0 w-full h-full cursor-crosshair"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  width={800}
-                  height={384}
-                />
-                {/* Render existing annotations */}
-                {annotations.map((ann) => (
-                  <div
-                    key={ann.id}
-                    className="absolute border-2 border-red-500 bg-red-500 bg-opacity-20"
-                    style={{
-                      left: ann.x,
-                      top: ann.y,
-                      width: Math.abs(ann.width),
-                      height: Math.abs(ann.height)
-                    }}
-                  >
-                    <div className="bg-red-500 text-white px-2 py-1 text-xs">
-                      {ann.label}
-                    </div>
-                  </div>
-                ))}
-                {/* Render current drawing box */}
-                {currentBox && (
-                  <div
-                    className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20"
-                    style={{
-                      left: currentBox.x,
-                      top: currentBox.y,
-                      width: Math.abs(currentBox.width),
-                      height: Math.abs(currentBox.height)
-                    }}
+              <div className="relative overflow-hidden rounded-lg bg-checkered">
+                <div 
+                  className="relative transition-transform duration-200"
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <img
+                    src={sampleImages[currentIndex]}
+                    alt={`Annotation ${currentIndex + 1}`}
+                    className="w-full h-96 object-contain rounded"
                   />
-                )}
+                  <canvas
+                    ref={canvasRef}
+                    className="absolute inset-0 w-full h-full cursor-crosshair"
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    width={800}
+                    height={384}
+                  />
+                  {/* Render existing annotations */}
+                  {annotations.map((ann, index) => (
+                    <div
+                      key={ann.id}
+                      className="absolute border-2 border-primary bg-primary/20 group hover:bg-primary/30 transition-colors"
+                      style={{
+                        left: ann.x,
+                        top: ann.y,
+                        width: Math.abs(ann.width),
+                        height: Math.abs(ann.height)
+                      }}
+                    >
+                      <div className="bg-primary text-primary-foreground px-2 py-1 text-xs font-medium">
+                        {ann.label} #{index + 1}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeAnnotation(ann.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {/* Render current drawing box */}
+                  {currentBox && (
+                    <div
+                      className="absolute border-2 border-blue-500 bg-blue-500/20 animate-pulse"
+                      style={{
+                        left: currentBox.x,
+                        top: currentBox.y,
+                        width: Math.abs(currentBox.width),
+                        height: Math.abs(currentBox.height)
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Annotation Tools</CardTitle>
+          <Card className="shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <Square className="w-5 h-5 mr-2 text-primary" />
+                Annotation Tools
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Select Label</Label>
+                <Label className="text-sm font-medium">Select Label</Label>
                 <Select value={selectedLabel} onValueChange={setSelectedLabel}>
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Choose a label" />
                   </SelectTrigger>
                   <SelectContent>
                     {labels.slice(3).map((label) => (
                       <SelectItem key={label} value={label}>
-                        {label}
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full bg-primary"></div>
+                          <span>{label}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {!selectedLabel && (
+                  <p className="text-xs text-muted-foreground mt-1">Select a label to start drawing</p>
+                )}
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Square className="w-4 h-4" />
-                <span className="text-sm">Bounding Box</span>
+              <Separator />
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Drawing Mode</span>
+                  <Badge variant={selectedLabel ? "default" : "secondary"}>
+                    {selectedLabel ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Click and drag on the image to create bounding boxes
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Annotations</CardTitle>
+          <Card className="shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Annotations ({annotations.length})</CardTitle>
+                {annotations.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setAnnotations([])}>
+                    Clear All
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {annotations.map((ann) => (
-                  <div key={ann.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                    <Badge>{ann.label}</Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeAnnotation(ann.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {annotations.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Tag className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No annotations yet</p>
                   </div>
-                ))}
+                ) : (
+                  annotations.map((ann, index) => (
+                    <div key={ann.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        <span className="text-sm font-medium">{ann.label}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAnnotation(ann.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="flex justify-between">
-        <Button variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <SkipForward className="w-4 h-4 mr-2" />
-            Skip
-          </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Save className="w-4 h-4 mr-2" />
-            Save & Next
-          </Button>
-        </div>
-      </div>
+      {/* Action Bar */}
+      <Card className="shadow-md bg-gradient-to-r from-slate-50 to-slate-100">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              <Button variant="outline">
+                <SkipForward className="w-4 h-4 mr-2" />
+                Skip
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Save className="w-4 h-4 mr-2" />
+                Save & Next
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
   const renderTextAnnotation = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Text Annotation</h3>
+      {/* Progress and Navigation Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-slate-900">Text Annotation</h3>
+          <div className="flex items-center space-x-4 text-sm text-slate-600">
+            <span>Text {currentIndex + 1} of {sampleTexts.length}</span>
+            <Separator orientation="vertical" className="h-4" />
+            <span>{sentiment ? 'Classified' : 'Unclassified'}</span>
+          </div>
+          <Progress value={(currentIndex + 1) / sampleTexts.length * 100} className="w-48" />
+        </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-slate-600">
-            {currentIndex + 1} of {sampleTexts.length}
-          </span>
           <Button
             variant="outline"
             size="sm"
@@ -259,34 +359,50 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({ selectedProje
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Text to Annotate</CardTitle>
+          <Card className="shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Text Content</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="p-4 bg-slate-50 rounded-lg text-slate-800 leading-relaxed">
-                {sampleTexts[currentIndex]}
+              <div className="relative">
+                <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border-2 border-dashed border-slate-200 text-slate-800 leading-relaxed font-medium">
+                  {sampleTexts[currentIndex]}
+                </div>
+                <div className="absolute top-2 right-2">
+                  <Badge variant="outline" className="bg-white/80 backdrop-blur-sm">
+                    {sampleTexts[currentIndex].split(' ').length} words
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Classification</CardTitle>
+          <Card className="shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <Tag className="w-5 h-5 mr-2 text-primary" />
+                Classification
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Sentiment</Label>
-                <Select>
-                  <SelectTrigger>
+                <Label className="text-sm font-medium">Sentiment</Label>
+                <Select value={sentiment} onValueChange={setSentiment}>
+                  <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select sentiment" />
                   </SelectTrigger>
                   <SelectContent>
                     {labels.slice(0, 3).map((label) => (
                       <SelectItem key={label} value={label.toLowerCase()}>
-                        {label}
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            label === 'Positive' ? 'bg-green-500' :
+                            label === 'Negative' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}></div>
+                          <span>{label}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -294,47 +410,119 @@ const AnnotationWorkspace: React.FC<AnnotationWorkspaceProps> = ({ selectedProje
               </div>
 
               <div>
-                <Label>Confidence</Label>
-                <Select>
-                  <SelectTrigger>
+                <Label className="text-sm font-medium">Confidence Level</Label>
+                <Select value={confidence} onValueChange={setConfidence}>
+                  <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select confidence" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="high">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span>High (90-100%)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <span>Medium (70-89%)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="low">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span>Low (50-69%)</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              <Separator />
+
               <div>
-                <Label>Notes (Optional)</Label>
+                <Label className="text-sm font-medium">Additional Notes</Label>
                 <Textarea 
-                  placeholder="Add any additional notes about this annotation..."
-                  className="h-24"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add context, reasoning, or special considerations..."
+                  className="h-24 mt-1 resize-none"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {notes.length}/500 characters
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Annotation Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge variant={sentiment && confidence ? "default" : "secondary"}>
+                    {sentiment && confidence ? "Complete" : "Pending"}
+                  </Badge>
+                </div>
+                {sentiment && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Sentiment:</span>
+                    <Badge variant="outline" className="capitalize">
+                      {sentiment}
+                    </Badge>
+                  </div>
+                )}
+                {confidence && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Confidence:</span>
+                    <Badge variant="outline" className="capitalize">
+                      {confidence}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="flex justify-between">
-        <Button variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <SkipForward className="w-4 h-4 mr-2" />
-            Skip
-          </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Save className="w-4 h-4 mr-2" />
-            Save & Next
-          </Button>
-        </div>
-      </div>
+      {/* Action Bar */}
+      <Card className="shadow-md bg-gradient-to-r from-slate-50 to-slate-100">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              <Button variant="outline">
+                <SkipForward className="w-4 h-4 mr-2" />
+                Skip
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!sentiment || !confidence}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save & Next
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
