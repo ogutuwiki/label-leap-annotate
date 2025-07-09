@@ -84,7 +84,7 @@ const Index = () => {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">LA</span>
                 </div>
-                <h1 className="text-xl font-bold text-slate-900">LabelLeap</h1>
+                <h1 className="text-xl font-bold text-slate-900">Data Bridge</h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
