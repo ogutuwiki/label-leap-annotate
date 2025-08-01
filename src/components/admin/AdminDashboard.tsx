@@ -3,6 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Users, BarChart3, FileText, Upload, Download, Settings, Eye, CheckCircle, XCircle } from "lucide-react";
 import ProjectCard from "@/components/ProjectCard";
 import UserManagement from "@/components/UserManagement";
@@ -13,8 +18,7 @@ import ProjectManagement from "./ProjectManagement";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("projects");
-
-  const projects = [
+  const [projects, setProjects] = useState([
     {
       id: 1,
       name: "Medical Image Classification",
@@ -41,7 +45,36 @@ const AdminDashboard = () => {
       status: "active",
       pendingApproval: 120
     }
-  ];
+  ]);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [newProject, setNewProject] = useState({
+    name: "",
+    type: "",
+    description: "",
+    totalItems: ""
+  });
+
+  const handleCreateProject = () => {
+    if (newProject.name && newProject.type && newProject.description && newProject.totalItems) {
+      const project = {
+        id: Math.max(...projects.map(p => p.id)) + 1,
+        name: newProject.name,
+        type: newProject.type,
+        description: newProject.description,
+        progress: 0,
+        totalItems: parseInt(newProject.totalItems),
+        completedItems: 0,
+        contributors: 0,
+        createdAt: new Date().toISOString().split('T')[0],
+        status: "active",
+        pendingApproval: 0
+      };
+      setProjects([...projects, project]);
+      setNewProject({ name: "", type: "", description: "", totalItems: "" });
+      setIsNewProjectOpen(false);
+    }
+  };
+
 
   const stats = {
     totalProjects: projects.length,
@@ -120,10 +153,72 @@ const AdminDashboard = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Project Management</h2>
             <div className="flex gap-2">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                New Project
-              </Button>
+              <Dialog open={isNewProjectOpen} onOpenChange={setIsNewProjectOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Project
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Create New Project</DialogTitle>
+                    <DialogDescription>
+                      Add a new annotation project to the platform.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Project Name</Label>
+                      <Input
+                        id="name"
+                        value={newProject.name}
+                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                        placeholder="Enter project name"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="type">Project Type</Label>
+                      <Select value={newProject.type} onValueChange={(value) => setNewProject({ ...newProject, type: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="image">Image Annotation</SelectItem>
+                          <SelectItem value="text">Text Annotation</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={newProject.description}
+                        onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                        placeholder="Describe the annotation task"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="totalItems">Total Items</Label>
+                      <Input
+                        id="totalItems"
+                        type="number"
+                        value={newProject.totalItems}
+                        onChange={(e) => setNewProject({ ...newProject, totalItems: e.target.value })}
+                        placeholder="Number of items to annotate"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsNewProjectOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateProject}>
+                      Create Project
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button variant="outline">
                 <Upload className="w-4 h-4 mr-2" />
                 Import Data
